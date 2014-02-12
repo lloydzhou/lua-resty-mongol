@@ -71,7 +71,7 @@ local function read_msg_header ( sock )
     return length , requestID , reponseTo , opcode
 end
 
-local function handle_reply ( conn , req_id , offset_i )
+local function handle_reply ( conn , req_id , offset_i , callback)
     offset_i = offset_i  or 0
 
     local r_len , r_req_id , r_res_id , opcode = read_msg_header ( conn.sock )
@@ -93,7 +93,7 @@ local function handle_reply ( conn , req_id , offset_i )
 
     local r = { }
     for i = 1 , t.numberReturned do
-        r[i] = from_bson(get)
+        r[i] = from_bson(get, callback)
     end
 
     return cursorid, r, t
@@ -204,7 +204,7 @@ function colmethods:kill_cursors(cursorIDs)
     return docmd(self.conn, "KILL_CURSORS", m )
 end
 
-function colmethods:query(query, returnfields, numberToSkip, numberToReturn, options)
+function colmethods:query(query, returnfields, numberToSkip, numberToReturn, options, callback)
     numberToSkip = numberToSkip or 0
 
     local flags = 0
@@ -230,15 +230,15 @@ function colmethods:query(query, returnfields, numberToSkip, numberToReturn, opt
         .. query .. returnfields
 
     local req_id = docmd(self.conn, "QUERY", m)
-    return handle_reply(self.conn, req_id, numberToSkip)
+    return handle_reply(self.conn, req_id, numberToSkip, callback)
 end
 
-function colmethods:getmore(cursorID, numberToReturn, offset_i)
+function colmethods:getmore(cursorID, numberToReturn, offset_i, callback)
     local m = "\0\0\0\0" .. full_collection_name(self, self.col) 
                 .. num_to_le_int(numberToReturn or 0) .. cursorID
 
     local req_id = docmd(self.conn, "GET_MORE" , m)
-    return handle_reply(self.conn, req_id, offset_i)
+    return handle_reply(self.conn, req_id, offset_i, callback)
 end
 
 function colmethods:count(query)

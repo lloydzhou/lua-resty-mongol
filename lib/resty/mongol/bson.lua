@@ -29,7 +29,7 @@ local ObjectId = require(mod_name..".ObjectId")
 local binary_mt = {}
 local utc_date = {}
 
-local function read_document(get, numerical)
+local function read_document(get, numerical, callback)
   local bytes = le_uint_to_num(get(4))
 
   local t = {}
@@ -87,7 +87,9 @@ local function read_document(get, numerical)
       t[e_name] = v
     end
   end
-  return t
+  -- add callback to process the return data.
+  -- eg: change the ObjectId to hexstring, can be serialize for json, or format the date to string.
+  return callback and callback(t) or t
 end
 
 local function get_utc_date(v)
@@ -98,8 +100,8 @@ local function get_bin_data(v)
   return setmetatable({v = v, st = "\0"}, binary_mt)
 end
 
-local function from_bson(get)
-  return read_document(get, false)
+local function from_bson(get, callback)
+  return read_document(get, false, callback)
 end
 
 local to_bson
